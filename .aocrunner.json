@@ -323,16 +323,16 @@
     },
     {
       "part1": {
-        "solved": false,
-        "result": null,
+        "solved": true,
+        "result": "1330",
         "attempts": [],
-        "time": null
+        "time": 2.198875
       },
       "part2": {
-        "solved": false,
-        "result": null,
+        "solved": true,
+        "result": "hl,io,ku,pk,ps,qq,sh,tx,ty,wq,xi,xj,yp",
         "attempts": [],
-        "time": null
+        "time": 33.470125
       }
     },
     {
