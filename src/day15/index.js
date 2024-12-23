@@ -2,201 +2,199 @@ import run from "aocrunner";
 
 const parseInput = (rawInput) => rawInput;
 
-let DIRECTIONS = { "^": [ -1, 0 ], "v": [ 1, 0 ], "<": [ 0, -1 ], ">": [ 0, 1 ] },
-   map = [], directions = [], instructions = false, pos;
+let MOVES = new Map([
+  ['<', [0, -1]],
+  ['>', [0, 1]],
+  ['^', [-1, 0]],
+  ['v', [1, 0]]
+]);
 
 const part1 = (rawInput) => {
-  const input = parseInput(rawInput).split(/\r?\n/g);;
+  const input = parseInput(rawInput).split(/(?:\r?\n){2}/);
 
-  input.forEach(line => {
-    if (line == "") return instructions = true;
-    if (instructions) return directions = [ ...directions, ...line.split("").map(direction => DIRECTIONS[direction]) ];
-    map.push(line.split(""));
-    if (line.indexOf("@") != -1) pos = [ map.length - 1, line.indexOf("@") ];
-  });
+  let grid = input[0].split(/\r?\n/).map(x => x.split(''));
+  let moves = input[1].replace(/[\r\n]/g, '').split('');
 
-  directions.forEach((direction, i) => {
-    let next = [ pos[0] + direction[0], pos[1] + direction[1] ];
-    if (map[next[0]][next[1]] == ".") {
-      map[pos[0]][pos[1]] = ".";
-      map[next[0]][next[1]] = "@";
-      pos = next;
-    } else if (map[next[0]][next[1]] == "O") {
-      let spaces = 1;
-      while (map[next[0] + direction[0] * spaces][next[1] + direction[1] * spaces] == "O") spaces++;
-      if (map[next[0] + direction[0] * spaces][next[1] + direction[1] * spaces] == "#") return;
-      map[pos[0]][pos[1]] = ".";
-      map[next[0]][next[1]] = "@";
-      map[ next[0] + direction[0] * spaces][next[1] + direction[1] * spaces ] = "O";
-      pos = next;
+  let x = null, y = null;
+  for(let i = 0; x === null && i < grid.length; ++i) {
+    for(let j = 0; j < grid[0].length; ++j) {
+      if(grid[i][j] === '@') {
+        x = j;
+        y = i;
+        break;
+      }
     }
-  });
+  }
 
-  let gps = 0;
-  map.forEach((line, i) => line.forEach((char, j) => gps += char == "O" ? 100 * i + j : 0));
+  for(let move of moves) {
+    let [yOff, xOff] = MOVES.get(move);
 
-  return gps;
+    let newX = x + xOff;
+    let newY = y + yOff;
+
+    if(grid[newY][newX] === '.') {
+      grid[newY][newX] = '@';
+      grid[y][x] = '.';
+      y = newY;
+      x = newX;
+      continue;
+    }
+    if(grid[newY][newX] === '#') { continue; }
+
+    let destX = newX + xOff;
+    let destY = newY + yOff;
+    while(true) {
+      if(grid[destY][destX] === '#') { break; }
+      if(grid[destY][destX] === '.') {
+        grid[newY][newX] = '@';
+        grid[y][x] = '.';
+        grid[destY][destX] = 'O';
+        y = newY;
+        x = newX;
+        break;
+      }
+
+      destX += xOff;
+      destY += yOff;
+    }
+  }
+
+  let result = 0;
+
+  for(let i = 0; i < grid.length; ++i) {
+    for(let j = 0; j < grid[0].length; ++j) {
+      if(grid[i][j] === 'O') {
+        result += i*100 + j;
+      }
+    }
+  }
+
+  return result;
+
 };
 
 const part2 = (rawInput) => {
-  const input = parseInput(rawInput).split(/\r?\n/g);
+  const input = parseInput(rawInput).split(/(?:\r?\n){2}/);
+  let grid =
+     input[0]
+        .replace(/\#/g, '##')
+        .replace(/\O/g, '[]')
+        .replace(/\./g, '..')
+        .replace(/\@/g, '@.')
+        .split(/\r?\n/)
+        .map(x => x.split(''));
+  let moves = input[1].replace(/[\r\n]/g, '').split('');
 
-  input.forEach(line => {
-    if (line == "") return instructions = true;
-    if (instructions) return directions = [ ...directions, ...line.split("").map(direction => DIRECTIONS[direction]) ];
-    let row = [];
-    line.split("").forEach(char => {
-      if (char == "#") row.push(...[ "#", "#" ]);
-      if (char == ".") row.push(...[ ".", "." ]);
-      if (char == "O") row.push(...[ "[", "]" ]);
-      if (char == "@") row.push(...[ "@", "." ]);
-    });
-    map.push(row);
-    if (line.indexOf("@") != -1) pos = [ map.length - 1, line.indexOf("@") * 2 ];
-  });
-
-  const findNextOpen = direction => {
-    let box;
-    switch (direction) {
-      case DIRECTIONS["^"]: return next => {
-        box = [ next[0] - 1, next[1] ];
-        if (map[box[0]][box[1]] == "#") return -1;
-        if (map[box[0]][box[1]] == "[" || map[box[0]][box[1]] == "]") box = findNextOpen(DIRECTIONS["^"])(box);
-        return box;
-      }
-      case DIRECTIONS["v"]: return next => {
-        box = [ next[0] + 1, next[1] ];
-        if (map[box[0]][box[1]] == "#") return -1;
-        if (map[box[0]][box[1]] == "[" || map[box[0]][box[1]] == "]") box = findNextOpen(DIRECTIONS["v"])(box);
-        return box;
-      }
-      case DIRECTIONS["<"]: return next => {
-        box = [ next[0], next[1] - 1 ];
-        if (map[box[0]][box[1]] == "#") return -1;
-        if (map[box[0]][box[1]] == "]") box = findNextOpen(DIRECTIONS["<"])([ box[0], box[1] - 1 ]);
-        return box;
-      }
-      case DIRECTIONS[">"]: return next => {
-        box = [ next[0], next[1] + 1 ];
-        if (map[box[0]][box[1]] == "#") return -1;
-        if (map[box[0]][box[1]] == "[") box = findNextOpen(DIRECTIONS[">"])([ box[0], box[1] + 1 ]);
-        return box;
+  let x = null, y = null;
+  for (let i = 0; x === null && i < grid.length; ++i) {
+    for (let j = 0; j < grid[0].length; ++j) {
+      if (grid[i][j] === '@') {
+        x = j;
+        y = i;
+        break;
       }
     }
   }
 
-  function findConnectedBoxes(box, direction) {
-    let touching = new Set();
-    if (map[box[0]][box[1]] == "[") {
-      if (map[box[0] + direction[0]][box[1]] == "[") touching.add(`${box[0] + direction[0]},${box[1]}`);
-      if (map[box[0] + direction[0]][box[1]] == "]") touching.add(`${box[0] + direction[0]},${box[1] - 1}`);
-      if (map[box[0] + direction[0]][box[1] + 1] == "[") touching.add(`${box[0] + direction[0]},${box[1] + 1}`);
+  for (let move of moves) {
+    let [yOff, xOff] = MOVES.get(move);
+
+
+    let newX = x + xOff;
+    let newY = y + yOff;
+
+    if (grid[newY][newX] === '.') {
+      grid[newY][newX] = '@';
+      grid[y][x] = '.';
+      y = newY;
+      x = newX;
+      continue;
     }
-    return [ ...touching.values() ].map(box => box.split(",").map(n => +n));
+    if (grid[newY][newX] === '#') { continue; }
+
+    let [boxL_x, boxL_y, boxR_x, boxR_y] = getBoxBounds(newY, newX);
+
+    if(shiftBox(true, boxL_y, boxL_x, boxR_y, boxR_x, yOff, xOff)) {
+      shiftBox(false, boxL_y, boxL_x, boxR_y, boxR_x, yOff, xOff);
+      grid[y][x] = '.';
+      grid[newY][newX] = '@';
+      y = newY;
+      x = newX;
+    }
+
   }
 
-  function buildLayerMap(box, direction) { // this function. this was what made me almost give up. i couldn't figure out how to write it for like 2 hours. 2 HOURS!!
-    if (map[box[0]][box[1]] == "]") box = [ box[0], box[1] - 1 ];
-    let layers = [ new Set([ `${box[0]},${box[1]}` ]) ];
-    do {
-      layers.push(new Set());
-      layers.at(-2).forEach(box => findConnectedBoxes(box.split(",").map(n => +n), direction).forEach(box => layers.at(-1).add(`${box[0]},${box[1]}`)));
-    } while (layers.at(-1).size);
-    layers = layers.splice(0, layers.length - 1);
-    return layers.map(layer => [ ...layer.values() ].map(box => box.split(",").map(n => +n)));
-  }
+  let result = 0;
 
-  function calculateBoxMovement(pos, direction) {
-    let next = [ pos[0] + direction[0], pos[1] + direction[1] ], box = findNextOpen(direction)(pos); // idk why i called the variable box. too lazy to change it now.
-    if (box == -1) return false;
-
-    if (direction == DIRECTIONS["^"]) {
-      let boxCoordinates = [ [...next] ]; // i shouldn't have called it box since now this is next and that makes no sense
-      if (map[next[0]][next[1]] == "[") boxCoordinates.push([ next[0], next[1] + 1 ]);
-      else boxCoordinates = [ [ next[0], next[1] - 1 ], ...boxCoordinates ];
-
-      let layerMap = buildLayerMap(next, direction);
-      for (let i = layerMap.length - 1; i >= 0; i--) {
-        let layer = layerMap[i];
-        for (let j = 0; j < layer.length; j++)
-          if (map[layer[j][0] - 1][layer[j][1]] == "#" || map[layer[j][0] - 1][layer[j][1] + 1] == "#") return false; // return false if ANY of the boxes will hit a wall (scan from top to bottom) - i'm surprised this worked
+  for (let i = 0; i < grid.length; ++i) {
+    for (let j = 0; j < grid[0].length; ++j) {
+      if (grid[i][j] === '[') {
+        result += i * 100 + j;
       }
+    }
+  }
 
-      for (let i = layerMap.length - 1; i >= 0; i--) {
-        let layer = layerMap[i];
-        for (let j = 0; j < layer.length; j++) {
-          let box = layer[j];
-          map[box[0]][box[1]] = ".";
-          map[box[0]][box[1] + 1] = ".";
-          map[box[0] - 1][box[1]] = "[";
-          map[box[0] - 1][box[1] + 1] = "]";
+  return result;
+
+  function shiftBox(dryRun, boxL_y, boxL_x, boxR_y, boxR_x, yOff, xOff) {
+    let q = [[boxL_y, boxL_x, '['], [boxR_y, boxR_x, ']']];
+    let seen = new Set([toDp(boxL_y, boxL_x), toDp(boxR_y, boxR_x)]);
+
+    if(!dryRun) {
+      grid[boxL_y][boxL_x] = '.';
+      grid[boxR_y][boxR_x] = '.';
+    }
+
+    while(q.length) {
+      let [moveY, moveX, val] = q.pop();
+
+      let newY = moveY + yOff;
+      let newX = moveX + xOff;
+      if(grid[newY][newX] === '.') {
+      } else if(grid[newY][newX] === '#') {
+        return false;
+      } else {
+        let [box2L_x, box2L_y, box2R_x, box2R_y] = getBoxBounds(newY, newX);
+
+        if(!seen.has(toDp(box2L_y, box2L_x))) {
+          seen.add(toDp(box2L_y, box2L_x));
+          seen.add(toDp(box2R_y, box2R_x));
+
+          q.push([box2L_y, box2L_x,'['],[box2R_y, box2R_x,']']);
+
+          if(!dryRun) {
+            grid[box2L_y][box2L_x] = '.';
+            grid[box2R_y][box2R_x] = '.';
+          }
         }
       }
 
-      return true;
-    } else if (direction == DIRECTIONS["v"]) {
-      let boxCoordinates = [ [...next] ];
-      if (map[next[0]][next[1]] == "[") boxCoordinates.push([ next[0], next[1] + 1 ]);
-      else boxCoordinates = [ [ next[0], next[1] - 1 ], ...boxCoordinates ];
-
-      let layerMap = buildLayerMap(next, direction);
-      for (let i = layerMap.length - 1; i >= 0; i--) {
-        let layer = layerMap[i];
-        for (let j = 0; j < layer.length; j++)
-          if (map[layer[j][0] + 1][layer[j][1]] == "#" || map[layer[j][0] + 1][layer[j][1] + 1] == "#") return false;
+      if(!dryRun) {
+        grid[newY][newX] = val;
       }
-
-      for (let i = layerMap.length - 1; i >= 0; i--) {
-        let layer = layerMap[i];
-        for (let j = 0; j < layer.length; j++) {
-          let box = layer[j];
-          map[box[0]][box[1]] = ".";
-          map[box[0]][box[1] + 1] = ".";
-          map[box[0] + 1][box[1]] = "[";
-          map[box[0] + 1][box[1] + 1] = "]";
-        }
-      }
-
-      return true;
-    } else if (direction == DIRECTIONS["<"]) {
-      let pointer = pos[1]; // since i'm too lazy to actually *move* the boxes, the pointer just flips them from [ to ] and vice versa; the first . becomes the new @ and the last . becomes a ] because it has to be an end-box (that's what i'm calling it)
-      while (pointer >= box[1]) {
-        if (map[pos[0]][pointer] == "]") map[pos[0]][pointer] = "[";
-        else if (map[pos[0]][pointer] == "[") map[pos[0]][pointer] = "]";
-        else map[pos[0]][pointer] = "[";
-        pointer--;
-      }
-      return true;
-    } else if (direction == DIRECTIONS[">"]) {
-      let pointer = pos[1];
-      while (pointer <= box[1]) {
-        if (map[pos[0]][pointer] == "]") map[pos[0]][pointer] = "[";
-        else if (map[pos[0]][pointer] == "[") map[pos[0]][pointer] = "]";
-        else map[pos[0]][pointer] = "]";
-        pointer++;
-      }
-      return true;
     }
+    return true;
   }
 
-  directions.forEach((direction, i) => {
-    let next = [ pos[0] + direction[0], pos[1] + direction[1] ];
-    if (map[next[0]][next[1]] == "#") return;
-    if (map[next[0]][next[1]] == ".") {
-      map[pos[0]][pos[1]] = ".";
-      map[next[0]][next[1]] = "@";
+
+  function toDp(x, y) {
+    return y*grid[0].length + x;
+  }
+
+  function getBoxBounds(y, x) {
+    let box2L_x, box2L_y, box2R_x, box2R_y;
+    if (grid[y][x] === '[') {
+      box2L_x = x;
+      box2L_y = y;
     } else {
-      if (!calculateBoxMovement(pos, direction)) return;
-      map[pos[0]][pos[1]] = ".";
-      map[next[0]][next[1]] = "@";
+      box2L_x = x-1;
+      box2L_y = y;
     }
-    pos = next;
-  });
+    box2R_x = box2L_x+1;
+    box2R_y = box2L_y;
 
-  let gps = 0;
-  map.forEach((line, i) => line.forEach((char, j) => gps += char == "[" ? 100 * i + j : 0));
-
-  return gps;
+    return [box2L_x, box2L_y, box2R_x, box2R_y];
+  }
 };
 
 run({
