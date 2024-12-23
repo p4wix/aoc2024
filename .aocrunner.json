@@ -240,15 +240,15 @@
     {
       "part1": {
         "solved": false,
-        "result": null,
+        "result": "7,3,5,7,5,7,4,3,0",
         "attempts": [],
-        "time": null
+        "time": 0.273292
       },
       "part2": {
         "solved": false,
-        "result": null,
+        "result": "false",
         "attempts": [],
-        "time": null
+        "time": 0.121791
       }
     },
     {
